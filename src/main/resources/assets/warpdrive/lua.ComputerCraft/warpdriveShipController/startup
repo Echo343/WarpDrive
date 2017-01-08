@@ -4,6 +4,12 @@ if not term.isColor() then
 end
 print("loading...")
 
+if fs.exists("bgTask") then
+  print("Starting background service...")
+  local newTabId = multishell.launch({}, "bgTask")
+  multishell.setTitle(newTabId, "Rednet")
+end
+
 monitor_textScale = 0.5
 
 Style = {
