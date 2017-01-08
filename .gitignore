@@ -19,3 +19,4 @@ dependencies
 
 *.DS_Store
 classes
+.vscode/settings.json
