@@ -1,6 +1,10 @@
 package cr0s.warpdrive.block.movement;
 
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
 import li.cil.oc.api.machine.Context;
@@ -34,33 +38,37 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 		}
 	}
 
-	private static enum MethodNames {
-		UP("up"),
-		DOWN("down"),
-		REDSTONE("redstone"),
-		ENABLE("enable"),
-		DISABLE("disable"),
-		GETMODE("getMode"),
-		ISENABLED("isEnabled");
-
-		private String method;
-		private MethodNames(String name) {
-			method = name;
-		}
-		public String getName() {
-			return method;
-		}
-		public static String[] toStringArray() {
-			return new String[] {
-				UP.getName(),
-				DOWN.getName(),
-				REDSTONE.getName(),
-				ENABLE.getName(),
-				DISABLE.getName(),
-				GETMODE.getName()
-			};
-		}
+	private interface CCMethod {
+		Object[] execute();
 	}
+
+	// private static enum MethodNames {
+	// 	UP("up"),
+	// 	DOWN("down"),
+	// 	REDSTONE("redstone"),
+	// 	ENABLE("enable"),
+	// 	DISABLE("disable"),
+	// 	GETMODE("getMode"),
+	// 	ISENABLED("isEnabled");
+
+	// 	private String method;
+	// 	private MethodNames(String name) {
+	// 		method = name;
+	// 	}
+	// 	public String getName() {
+	// 		return method;
+	// 	}
+	// 	public static String[] toStringArray() {
+	// 		return new String[] {
+	// 			UP.getName(),
+	// 			DOWN.getName(),
+	// 			REDSTONE.getName(),
+	// 			ENABLE.getName(),
+	// 			DISABLE.getName(),
+	// 			GETMODE.getName()
+	// 		};
+	// 	}
+	// }
 	
 	private int firstUncoveredY;
 	private Mode mode = Mode.INACTIVE;
@@ -69,13 +77,24 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	private Mode computerMode = Mode.REDSTONE;
 	
 	private int tickCount = 0;
+
+	private Map<String, CCMethod> methodMap = new HashMap<String, CCMethod>();
 	
 	public TileEntityLift() {
 		super();
 		IC2_sinkTier = 2;
 		IC2_sourceTier = 2;
 		peripheralName = "warpdriveLift";
-		addMethods(MethodNames.toStringArray());
+		
+		methodMap.put("up", new CCMethod() { public Object[] execute() { return mode(Mode.UP); }});
+		methodMap.put("down", new CCMethod() { public Object[] execute() { return mode(Mode.DOWN); }});
+		methodMap.put("redstone", new CCMethod() { public Object[] execute() { return mode(Mode.REDSTONE); }});
+		methodMap.put("getMode", new CCMethod() { public Object[] execute() { return new Object[] {computerMode.toString()}; }});
+		methodMap.put("enable", new CCMethod() { public Object[] execute() { computerEnabled = true; return new Object[] { !computerEnabled && isEnabled };}});
+		methodMap.put("disable", new CCMethod() { public Object[] execute() { computerEnabled = false; return new Object[] { !computerEnabled && isEnabled };}});
+		methodMap.put("isEnabled", new CCMethod() { public Object[] execute() { return new Object[] { isEnabled };}});
+
+		addMethods(methodMap.keySet().toArray(new String[7]));
 	}
 	
 	@Override
@@ -277,29 +296,9 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	@Optional.Method(modid = "ComputerCraft")
 	public Object[] callMethod(IComputerAccess computer, ILuaContext context, int method, Object[] arguments) {
 		String methodName = getMethodName(method);
-		
-		if (MethodNames.UP.getName().equals(methodName)) {
-			return mode(Mode.UP);
-		}
-		else if (MethodNames.DOWN.getName().equals(methodName)) {
-			return mode(Mode.DOWN);
-		}
-		else if (MethodNames.REDSTONE.getName().equals(methodName)) {
-			return mode(Mode.REDSTONE);
-		}
-		else if (MethodNames.GETMODE.getName().equals(methodName)) {
-			return new Object[] { computerMode.toString() };
-		}
-		else if (MethodNames.ENABLE.getName().equals(methodName)) {
-			computerEnabled = true;
-			return new Object[] { !computerEnabled && isEnabled };
-		}
-		else if (MethodNames.DISABLE.getName().equals(methodName)) {
-			computerEnabled = false;
-			return new Object[] { !computerEnabled && isEnabled };
-		}
-		else if (MethodNames.ISENABLED.getName().equals(methodName)) {
-			return new Object[] { (this.isEnabled) ? "true" : "false" };
+		CCMethod ccMethod = methodMap.get(methodName);
+		if (ccMethod != null) {
+			return ccMethod.execute();
 		}
 		else {
 			return super.callMethod(computer, context, method, arguments);
