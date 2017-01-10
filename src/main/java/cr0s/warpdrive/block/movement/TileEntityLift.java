@@ -1,6 +1,5 @@
 package cr0s.warpdrive.block.movement;
 
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +22,10 @@ import dan200.computercraft.api.lua.ILuaContext;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 
 public class TileEntityLift extends TileEntityAbstractEnergy {
+	private interface CCMethod {
+		Object[] execute();
+	}
+
 	private static enum Mode {
 		REDSTONE(-1),
 		INACTIVE(0),
@@ -37,38 +40,6 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 			return code;
 		}
 	}
-
-	private interface CCMethod {
-		Object[] execute();
-	}
-
-	// private static enum MethodNames {
-	// 	UP("up"),
-	// 	DOWN("down"),
-	// 	REDSTONE("redstone"),
-	// 	ENABLE("enable"),
-	// 	DISABLE("disable"),
-	// 	GETMODE("getMode"),
-	// 	ISENABLED("isEnabled");
-
-	// 	private String method;
-	// 	private MethodNames(String name) {
-	// 		method = name;
-	// 	}
-	// 	public String getName() {
-	// 		return method;
-	// 	}
-	// 	public static String[] toStringArray() {
-	// 		return new String[] {
-	// 			UP.getName(),
-	// 			DOWN.getName(),
-	// 			REDSTONE.getName(),
-	// 			ENABLE.getName(),
-	// 			DISABLE.getName(),
-	// 			GETMODE.getName()
-	// 		};
-	// 	}
-	// }
 	
 	private int firstUncoveredY;
 	private Mode mode = Mode.INACTIVE;
@@ -78,23 +49,51 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	
 	private int tickCount = 0;
 
-	private Map<String, CCMethod> methodMap = new HashMap<String, CCMethod>();
+	private final Map<String, CCMethod> methodMap = new HashMap<String, CCMethod>();
 	
 	public TileEntityLift() {
 		super();
 		IC2_sinkTier = 2;
 		IC2_sourceTier = 2;
 		peripheralName = "warpdriveLift";
-		
-		methodMap.put("up", new CCMethod() { public Object[] execute() { return mode(Mode.UP); }});
-		methodMap.put("down", new CCMethod() { public Object[] execute() { return mode(Mode.DOWN); }});
-		methodMap.put("redstone", new CCMethod() { public Object[] execute() { return mode(Mode.REDSTONE); }});
-		methodMap.put("getMode", new CCMethod() { public Object[] execute() { return new Object[] {computerMode.toString()}; }});
-		methodMap.put("enable", new CCMethod() { public Object[] execute() { computerEnabled = true; return new Object[] { !computerEnabled && isEnabled };}});
-		methodMap.put("disable", new CCMethod() { public Object[] execute() { computerEnabled = false; return new Object[] { !computerEnabled && isEnabled };}});
-		methodMap.put("isEnabled", new CCMethod() { public Object[] execute() { return new Object[] { isEnabled };}});
-
+		initMethodMap();
 		addMethods(methodMap.keySet().toArray(new String[7]));
+	}
+
+	private void initMethodMap() {
+		CCMethod func_up = new CCMethod() { public Object[] execute() { return mode(Mode.UP); }};
+		CCMethod func_down = new CCMethod() { public Object[] execute() { return mode(Mode.DOWN); }};
+		CCMethod func_redstone = new CCMethod() { public Object[] execute() { return mode(Mode.REDSTONE); }};
+		CCMethod func_getMode = new CCMethod() { 
+			public Object[] execute() { 
+				return new Object[] {computerMode.toString()}; 
+			}
+		};
+		CCMethod func_enable = new CCMethod() { 
+			public Object[] execute() { 
+				computerEnabled = true; 
+				return new Object[] { !computerEnabled && isEnabled };
+			}
+		};
+		CCMethod func_disable = new CCMethod() { 
+			public Object[] execute() { 
+				computerEnabled = false; 
+				return new Object[] { !computerEnabled && isEnabled };
+			}
+		};
+		CCMethod func_isEnabled = new CCMethod() { 
+			public Object[] execute() { 
+				return new Object[] { isEnabled };
+			}
+		};
+
+		methodMap.put("up", func_up);
+		methodMap.put("down", func_down);
+		methodMap.put("redstone", func_redstone);
+		methodMap.put("getMode", func_getMode);
+		methodMap.put("enable", func_enable);
+		methodMap.put("disable", func_disable);
+		methodMap.put("isEnabled", func_isEnabled);
 	}
 	
 	@Override
