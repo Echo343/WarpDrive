@@ -1,6 +1,8 @@
 package cr0s.warpdrive.block.movement;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
@@ -20,28 +22,78 @@ import dan200.computercraft.api.lua.ILuaContext;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 
 public class TileEntityLift extends TileEntityAbstractEnergy {
-	private static final int MODE_REDSTONE = -1;
-	private static final int MODE_INACTIVE = 0;
-	private static final int MODE_UP = 1;
-	private static final int MODE_DOWN = 2;
+	private interface CCMethod {
+		Object[] execute();
+	}
+
+	private static enum Mode {
+		REDSTONE(-1),
+		INACTIVE(0),
+		UP(1),
+		DOWN(2);
+
+		private int code;
+		private Mode(int code) {
+			this.code = code;
+		}
+		public int getCode() {
+			return code;
+		}
+	}
 	
 	private int firstUncoveredY;
-	private int mode = MODE_INACTIVE;
+	private Mode mode = Mode.INACTIVE;
 	private boolean isEnabled = false;
 	private boolean computerEnabled = true;
-	private int computerMode = MODE_REDSTONE;
+	private Mode computerMode = Mode.REDSTONE;
 	
 	private int tickCount = 0;
+
+	private final Map<String, CCMethod> methodMap = new HashMap<String, CCMethod>();
 	
 	public TileEntityLift() {
 		super();
 		IC2_sinkTier = 2;
 		IC2_sourceTier = 2;
 		peripheralName = "warpdriveLift";
-		addMethods(new String[] {
-				"mode",
-				"active"
-		});
+		initMethodMap();
+		addMethods(methodMap.keySet().toArray(new String[7]));
+	}
+
+	private void initMethodMap() {
+		CCMethod func_up = new CCMethod() { public Object[] execute() { return mode(Mode.UP); }};
+		CCMethod func_down = new CCMethod() { public Object[] execute() { return mode(Mode.DOWN); }};
+		CCMethod func_redstone = new CCMethod() { public Object[] execute() { return mode(Mode.REDSTONE); }};
+		CCMethod func_getMode = new CCMethod() { 
+			public Object[] execute() { 
+				return new Object[] {computerMode.toString()}; 
+			}
+		};
+		CCMethod func_enable = new CCMethod() { 
+			public Object[] execute() { 
+				computerEnabled = true; 
+				return new Object[] { !computerEnabled && isEnabled };
+			}
+		};
+		CCMethod func_disable = new CCMethod() { 
+			public Object[] execute() { 
+				computerEnabled = false; 
+				return new Object[] { !computerEnabled && isEnabled };
+			}
+		};
+		CCMethod func_isEnabled = new CCMethod() { 
+			public Object[] execute() { 
+				return new Object[] { isEnabled };
+			}
+		};
+
+		methodMap.put("up", func_up);
+		methodMap.put("down", func_down);
+		methodMap.put("redstone", func_redstone);
+		methodMap.put("getMode", func_getMode);
+		methodMap.put("enable", func_enable);
+		methodMap.put("disable", func_disable);
+		methodMap.put("isEnabled", func_isEnabled);
 	}
 	
 	@Override
@@ -57,11 +109,11 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 			tickCount = 0;
 			
 			// Switching mode
-			if (  computerMode == MODE_DOWN
-			  || (computerMode == MODE_REDSTONE && worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord))) {
-				mode = MODE_DOWN;
+			if (  computerMode == Mode.DOWN
+			  || (computerMode == Mode.REDSTONE && worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord))) {
+				mode = Mode.DOWN;
 			} else {
-				mode = MODE_UP;
+				mode = Mode.UP;
 			}
 			
 			isEnabled = computerEnabled
@@ -71,15 +123,15 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 				     && isPassableBlock(yCoord - 2);
 			
 			if (energy_getEnergyStored() < WarpDriveConfig.LIFT_ENERGY_PER_ENTITY || !isEnabled) {
-				mode = MODE_INACTIVE;
+				mode = Mode.INACTIVE;
 				if (getBlockMetadata() != 0) {
 					worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, 0, 2); // disabled
 				}
 				return;
 			}
 			
-			if (getBlockMetadata() != mode) {
-				worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, mode, 2); // current mode
+			if (getBlockMetadata() != mode.getCode()) {
+				worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, mode.getCode(), 2); // current mode
 			}
 			
 			// Launch a beam: search non-air blocks under lift
@@ -91,12 +143,12 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 			}
 			
 			if (yCoord - firstUncoveredY >= 2) {
-				if (mode == MODE_UP) {
+				if (mode == Mode.UP) {
 					PacketHandler.sendBeamPacket(worldObj,
 							new Vector3(xCoord + 0.5D, firstUncoveredY, zCoord + 0.5D),
 							new Vector3(xCoord + 0.5D, yCoord, zCoord + 0.5D),
 							0f, 1f, 0f, 40, 0, 100);
-				} else if (mode == MODE_DOWN) {
+				} else if (mode == Mode.DOWN) {
 					PacketHandler.sendBeamPacket(worldObj,
 							new Vector3(xCoord + 0.5D, yCoord, zCoord + 0.5D),
 							new Vector3(xCoord + 0.5D, firstUncoveredY, zCoord + 0.5D), 0f,
@@ -126,7 +178,7 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 		zMax = zCoord + 0.5 + CUBE_RADIUS;
 		
 		// Lift up
-		if (mode == MODE_UP) {
+		if (mode == Mode.UP) {
 			AxisAlignedBB aabb = AxisAlignedBB.getBoundingBox(xMin, firstUncoveredY, zMin, xMax, yCoord, zMax);
 			List list = worldObj.getEntitiesWithinAABBExcludingEntity(null, aabb);
 			if (list != null) {
@@ -144,7 +196,7 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 					}
 				}
 			}
-		} else if (mode == MODE_DOWN) {
+		} else if (mode == Mode.DOWN) {
 			AxisAlignedBB aabb = AxisAlignedBB.getBoundingBox(xMin,
 					Math.min(firstUncoveredY + 4.0D, yCoord), zMin, xMax, yCoord + 2.0D, zMax);
 			List list = worldObj.getEntitiesWithinAABBExcludingEntity(null, aabb);
@@ -169,22 +221,22 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	public void readFromNBT(NBTTagCompound tag) {
 		super.readFromNBT(tag);
 		if (tag.hasKey("mode")) {
-			mode = clamp(-1, 2, tag.getByte("mode"));
+			mode = Mode.valueOf(tag.getString("mode"));
 		}
 		if (tag.hasKey("computerEnabled")) {
 			computerEnabled = tag.getBoolean("computerEnabled");
 		}
 		if (tag.hasKey("computerMode")) {
-			computerMode = clamp(-1, 2, tag.getByte("computerMode"));
+			computerMode = Mode.valueOf(tag.getString("computerMode"));
 		}
 	}
 	
 	@Override
 	public void writeToNBT(NBTTagCompound tag) {
 		super.writeToNBT(tag);
-		tag.setByte("mode", (byte)mode);
+		tag.setString("mode", mode.name());
 		tag.setBoolean("computerEnabled", computerEnabled);
-		tag.setByte("computerMode", (byte)computerMode);
+		tag.setString("computerMode", computerMode.name());
 	}
 	
 	@Override
@@ -201,11 +253,14 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	@Callback
 	@Optional.Method(modid = "OpenComputers")
 	public Object[] mode(Context context, Arguments arguments) {
-		return mode(
-			new Object[] {
-				arguments.checkString(0)
-			}
-		);
+		switch (arguments.checkString(0)) {
+			case "up":
+				return mode(Mode.UP);
+			case "down":
+				return mode(Mode.DOWN);
+			default:
+				return mode(Mode.REDSTONE);
+		}
 	}
 	
 	@Callback
@@ -218,24 +273,16 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 		return new Object[] { !computerEnabled && isEnabled };
 	}
 	
-	private Object[] mode(Object[] arguments) {
-		if (arguments.length == 1) {
-			if (arguments[0].toString().equals("up")) {
-				computerMode = MODE_UP;
-			} else if (arguments[0].toString().equals("down")) {
-				computerMode = MODE_DOWN;
-			} else {
-				computerMode = MODE_REDSTONE;
-			}
-			markDirty();
-		}
+	private Object[] mode(Mode mode) {
+		computerMode = mode;
+		markDirty();
 		
 		switch (computerMode) {
-		case MODE_REDSTONE:
+		case REDSTONE:
 			return new Object[] { "redstone" };
-		case MODE_UP:
+		case UP:
 			return new Object[] { "up" };
-		case MODE_DOWN:
+		case DOWN:
 			return new Object[] { "down" };
 		default:
 			break;
@@ -248,17 +295,12 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	@Optional.Method(modid = "ComputerCraft")
 	public Object[] callMethod(IComputerAccess computer, ILuaContext context, int method, Object[] arguments) {
 		String methodName = getMethodName(method);
-		
-		if (methodName.equals("mode")) {
-			return mode(arguments);
-			
-		} else if (methodName.equals("active")) {
-			if (arguments.length == 1) {
-				computerEnabled = toBool(arguments[0]);
-			}
-			return new Object[] { !computerEnabled && isEnabled };
+		CCMethod ccMethod = methodMap.get(methodName);
+		if (ccMethod != null) {
+			return ccMethod.execute();
 		}
-		
-		return super.callMethod(computer, context, method, arguments);
+		else {
+			return super.callMethod(computer, context, method, arguments);
+		}
 	}
 }
