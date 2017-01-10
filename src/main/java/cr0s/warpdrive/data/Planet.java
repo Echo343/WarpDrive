@@ -79,15 +79,12 @@ public class Planet implements Cloneable {
 	 * @param currentPosition current position in space
 	 * @return distance to transition borders, 0 if entry is possible
 	 */
-	public int isValidFromSpace(final VectorI currentPosition) {
-		return isValidFromSpace(currentPosition.x, currentPosition.z);
-	}
-	public int isValidFromSpace(final int x, final int z) {
-		if ((Math.abs(x - spaceCenterX) <= borderSizeX) && (Math.abs(z - spaceCenterZ) <= borderSizeZ)) {
+	public int isValidFromSpace(VectorI currentPosition) {
+		if ((Math.abs(currentPosition.x - spaceCenterX) <= borderSizeX) && (Math.abs(currentPosition.z - spaceCenterZ) <= borderSizeZ)) {
 			return 0;
 		}
-		return (int) Math.sqrt( Math.pow(Math.max(0D, Math.abs(x - spaceCenterX) - borderSizeX), 2.0D)
-		                      + Math.pow(Math.max(0D, Math.abs(z - spaceCenterZ) - borderSizeZ), 2.0D));
+		return (int) Math.sqrt(Math.pow(Math.max(0D, Math.abs(currentPosition.x - spaceCenterX) - borderSizeX), 2.0D)
+				+ Math.pow(Math.max(0D, Math.abs(currentPosition.z - spaceCenterZ) - borderSizeZ), 2.0D));
 	}
 	
 	public void readFromNBT(NBTTagCompound tag) {
