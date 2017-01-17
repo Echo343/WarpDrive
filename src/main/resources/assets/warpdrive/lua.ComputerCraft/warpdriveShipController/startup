@@ -639,10 +639,10 @@ function core_page_setDistanceAxis(line, axis, positive, negative, userEntry, sh
     SetCursorPos(1, line)
     Write(axis .. " movement: ")
     userEntry = readInputNumber(userEntry)
-    if userEntry ~= 0 and (math.abs(userEntry) <= shipLength or math.abs(userEntry) > maximumDistance) then
+    if userEntry ~= 0 and (math.abs(userEntry) > maximumDistance) then
       ShowWarning("Wrong distance. Try again.")
     end
-  until userEntry == 0 or (math.abs(userEntry) > shipLength and math.abs(userEntry) <= maximumDistance)
+  until userEntry == 0 or (math.abs(userEntry) <= maximumDistance)
   SetCursorPos(1, line + 1)
   ClearLine()
   SetCursorPos(1, line + 2)
