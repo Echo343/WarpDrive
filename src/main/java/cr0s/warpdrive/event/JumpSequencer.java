@@ -726,18 +726,20 @@ public class JumpSequencer extends AbstractSequencer {
 					if (WarpDriveConfig.LOGGING_JUMP) {
 						WarpDrive.logger.error("There's no world border defined for dimension " + targetWorld.provider.getDimensionName());
 					}
-				} else if (!planetValid) {
-					LocalProfiler.stop();
-					assert (closestPlanet != null);
-					String msg = "Target ship position is outside planet border, unable to jump!\nPlanet borders are ("
-					             + (closestPlanet.dimensionCenterX - closestPlanet.borderSizeX) + " 0 "
-					             + (closestPlanet.dimensionCenterZ - closestPlanet.borderSizeZ) + ") to ("
-					             + (closestPlanet.dimensionCenterX + closestPlanet.borderSizeX) + " 255 "
-					             + (closestPlanet.dimensionCenterZ + closestPlanet.borderSizeZ) + ")";
-					ship.messageToAllPlayersOnShip(msg);
-					disable(msg);
-					return;
 				}
+				//Allow jumping all around every planet.
+				// else if (!planetValid) {
+				// 	LocalProfiler.stop();
+				// 	assert (closestPlanet != null);
+				// 	String msg = "Target ship position is outside planet border, unable to jump!\nPlanet borders are ("
+				// 	             + (closestPlanet.dimensionCenterX - closestPlanet.borderSizeX) + " 0 "
+				// 	             + (closestPlanet.dimensionCenterZ - closestPlanet.borderSizeZ) + ") to ("
+				// 	             + (closestPlanet.dimensionCenterX + closestPlanet.borderSizeX) + " 255 "
+				// 	             + (closestPlanet.dimensionCenterZ + closestPlanet.borderSizeZ) + ")";
+				// 	ship.messageToAllPlayersOnShip(msg);
+				// 	disable(msg);
+				// 	return;
+				// }
 			}
 		}
 		if (!isPluginCheckDone) {
