@@ -624,9 +624,9 @@ function core_page_setMovement()
 end
 
 function core_page_setDistanceAxis(line, axis, positive, negative, userEntry, shipLength)
-  local maximumDistance = shipLength + 127
+  local maximumDistance = shipLength + 512
   if core_isInHyper and line ~= 3 then
-    maximumDistance = shipLength + 127 * 100
+    maximumDistance = shipLength + 512 * 100
   end
   SetColorDisabled()
   SetCursorPos(3, line + 1)
