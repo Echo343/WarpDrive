@@ -4,9 +4,9 @@ if not term.isColor() then
 end
 print("loading...")
 
-if fs.exists("bgTask") then
-  print("Starting background service...")
-  local newTabId = multishell.launch({}, "bgTask")
+if fs.exists("overrideTask") then
+  print("Starting override service...")
+  local newTabId = multishell.launch({}, "overrideTask")
   multishell.setTitle(newTabId, "Rednet")
 end
 
@@ -933,7 +933,10 @@ abort = false
 refresh = true
 page = connections_page
 keyHandler = nil
-repeat
+if fs.exists("overrideTask") then
+  abort = true
+end
+while not abort do
   ClearWarning()
   if refresh then
     Clear()
@@ -978,7 +981,7 @@ repeat
     refresh = true
     os.sleep(0.2)
   end
-until abort
+end
 
 -- exiting
 if data.core_summon then
